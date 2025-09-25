@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Sustaining 🌱</title>
+<link rel="preconnect" href="https://fonts.gstatic.com">
+<style>
+  /* --- Basic styling (polished mobile-first UI) --- */
+  :root{
+    --green:#28a745; --green-dark:#19692c; --muted:#f3f8f3;
+    --card-bg: #ffffff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:linear-gradient(180deg,#e8fff0 0%,#ffffff 100%); color:#0b3b1f}
+  header{background:var(--green); color:#fff; padding:14px 12px; text-align:center; font-weight:700; font-size:1.25rem;}
+  .tabs{display:flex; gap:0; background:var(--green); box-shadow:0 2px 6px rgba(0,0,0,0.06);}
+  .tabs button{flex:1; background:var(--green-dark); color:#fff; border:none; padding:12px; font-weight:600; cursor:pointer;}
+  .tabs button.active{background:#14521b}
+  .container{padding:14px; max-width:900px; margin:0 auto;}
+  .tab-content{display:none}
+  .tab-content.active{display:block}
+  .card{background:var(--card-bg); padding:12px; border-radius:12px; box-shadow:0 4px 14px rgba(10,40,20,0.06); margin-bottom:12px}
+  button.primary{background:var(--green); color:white; border:none; padding:10px 12px; border-radius:10px; cursor:pointer; font-weight:700}
+  button.ghost{background:transparent; border:1px solid #e6f3ea; color:var(--green)}
+  input, textarea{width:100%; padding:10px; border-radius:8px; border:1px solid #e6f3ea; margin-top:8px}
+  .row{display:flex; gap:10px; align-items:center}
+  .flex-1{flex:1}
+  .center{text-align:center}
+  .small{font-size:0.9rem;color:#385f3b}
+  .badge{display:inline-block; padding:6px 10px; border-radius:999px; background:#e8f7ea; color:#146a2a; font-weight:700; margin:4px}
+  .grid{display:grid; grid-template-columns:repeat(2,1fr); gap:10px}
+  /* Trash items style */
+  #trash-items .card{display:inline-block; margin:6px; padding:10px 14px; cursor:grab}
+  /* charts */
+  .chart{width:100%; height:160px}
+  /* small toast */
+  .toast{position:fixed; left:50%; transform:translateX(-50%); bottom:22px; background:rgba(0,0,0,0.75); color:#fff; padding:9px 12px;border-radius:10px; z-index:9999}
+  /* responsive */
+  @media(min-width:700px){ .grid{grid-template-columns:repeat(3,1fr)} .container{max-width:1000px} }
+  canvas#confetti{position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:9999}
+</style>
+</head>
+<body>
+<header>Sustaining 🌱 — Eco Action Tracker</header>
+
+<div class="tabs" role="tablist">
+  <button class="active" onclick="openTab('home',event)" aria-selected="true">Home</button>
+  <button onclick="openTab('actions',event)">Actions</button>
+  <button onclick="openTab('custom',event)">Log</button>
+  <button onclick="openTab('badges',event)">Badges</button>
+  <button onclick="openTab('stats',event)">Stats</button>
+  <button onclick="openTab('game',event)">Mini-Game</button>
+  <button onclick="openTab('chat',event)">AI Chat</button>
+</div>
+
+<div class="container">
+  <!-- Home -->
+  <div id="home" class="tab-content active">
+    <div class="card center">
+      <h2 style="margin:6px 0">Welcome to Sustaining 🌍</h2>
+      <div class="row" style="justify-content:center; gap:18px; margin-top:8px">
+        <div class="card" style="min-width:120px">
+          <div class="small">Points</div>
+          <div id="points" style="font-size:1.4rem; font-weight:800">0</div>
+        </div>
+        <div class="card" style="min-width:120px">
+          <div class="small">Streak</div>
+          <div id="streak" style="font-size:1.4rem; font-weight:800">0</div>
+        </div>
+        <div class="card" style="min-width:140px">
+          <div class="small">Carbon Saved</div>
+          <div id="carbon" style="font-size:1.2rem; font-weight:800">0 kg</div>
+        </div>
+      </div>
+      <p class="small" style="margin-top:12px">Tip of the day: Carry a reusable bottle — small choices add up!</p>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div id="actions" class="tab-content">
+    <div class="card">
+      <h3>Daily Eco Actions</h3>
+      <div id="action-list" class="grid"></div>
+    </div>
+  </div>
+
+  <!-- Custom -->
+  <div id="custom" class="tab-content">
+    <div class="card">
+      <h3>Log a Custom Eco Action</h3>
+      <input id="custom-action" placeholder="Describe what you did (e.g., picked up litter)" />
+      <input id="custom-points" type="number" placeholder="Points earned" min="1" />
+      <div style="margin-top:8px">
+        <button class="primary" onclick="addCustomAction()">Log Action</button>
+      </div>
+      <div id="custom-list" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+  <!-- Badges -->
+  <div id="badges" class="tab-content">
+    <div class="card">
+      <h3>Badges & Achievements</h3>
+      <div id="badge-list" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div id="stats" class="tab-content">
+    <div class="card">
+      <h3>Data Science Dashboard</h3>
+      <p class="small">Visualize your weekly progress and carbon savings</p>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-start">
+        <div style="flex:1; min-width:240px" class="card">
+          <div class="small">Points This Week</div>
+          <canvas id="pointsChart" class="chart"></canvas>
+        </div>
+        <div style="flex:1; min-width:240px" class="card">
+          <div class="small">CO₂ Saved (kg)</div>
+          <canvas id="carbonChart" class="chart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mini-Game -->
+  <div id="game" class="tab-content">
+    <div class="card">
+      <h3>Trash Sorting Mini-Game</h3>
+      <p class="small">Drag items to the correct bin. Correct = +5 points, Wrong = -2.</p>
+      <div id="trash-items" style="margin-top:8px"></div>
+      <div style="display:flex; gap:10px; margin-top:12px">
+        <div id="Recycle" class="card center" style="flex:1; background:#cce5ff">Recycle ♻️</div>
+        <div id="Compost" class="card center" style="flex:1; background:#d4edda">Compost 🌱</div>
+        <div id="Trash" class="card center" style="flex:1; background:#f8d7da">Trash 🗑️</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat -->
+  <div id="chat" class="tab-content">
+    <div class="card">
+      <h3>EcoBot — AI Assistant 🤖</h3>
+      <div id="chat-window" style="height:200px; overflow:auto; padding:8px; background:#fbfff9; border-radius:8px; margin-bottom:8px"></div>
+      <div class="row">
+        <input id="chat-input" placeholder="Ask EcoBot for tips (e.g. 'How to reduce plastic?')" />
+        <button class="primary" onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<canvas id="confetti"></canvas>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+/* -------------------------
+   Sustaining — Full App JS
+   ------------------------- */
+
+// ---------- App State ----------
+let points = 0, streak = 0, carbon = 0;
+let actions = [
+  {name:"Turn off lights 💡", points:5},
+  {name:"Use reusable bottle 🥤", points:8},
+  {name:"Recycle paper 📄", points:10},
+  {name:"Plant a tree 🌳", points:20},
+  {name:"Use public transport 🚌", points:7},
+  {name:"Reduce water use 💧", points:5},
+  {name:"No plastic bags today 🛍️", points:10}
+];
+let trashItems = [
+  {name:"Plastic Bottle 🥤", bin:"Recycle"},
+  {name:"Apple Core 🍎", bin:"Compost"},
+  {name:"Plastic Bag 🛍️", bin:"Trash"},
+  {name:"Paper 📄", bin:"Recycle"}
+];
+let dailyPoints = Array(7).fill(0);
+let dailyCarbon = Array(7).fill(0);
+
+// ---------- Tabs ----------
+function openTab(tab, event){
+  document.querySelectorAll('.tab-content').forEach(tc=>tc.classList.remove('active'));
+  document.getElementById(tab).classList.add('active');
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active'));
+  if(event && event.currentTarget) event.currentTarget.classList.add('active');
+}
+
+// ---------- UI Updates ----------
+function updateHome(){
+  document.getElementById("points").textContent = points;
+  document.getElementById("streak").textContent = streak;
+  document.getElementById("carbon").textContent = carbon.toFixed(2) + " kg";
+}
+function updateStats(){
+  document.getElementById("total-points").textContent = points;
+  document.getElementById("total-carbon").textContent = carbon.toFixed(2);
+  updateCharts();
+}
+
+// ---------- Storage ----------
+function saveState(){
+  const state = {points, streak, carbon, actions, trashItems, dailyPoints, dailyCarbon};
+  localStorage.setItem('sustaining_state_v1', JSON.stringify(state));
+}
+function loadState(){
+  try {
+    const raw = localStorage.getItem('sustaining_state_v1');
+    if(!raw) return null;
+    return JSON.parse(raw);
+  } catch(e) { return null; }
+}
+function restoreState(){
+  const s = loadState();
+  if(!s) return;
+  points = s.points || points;
+  streak = s.streak || streak;
+  carbon = s.carbon || carbon;
+  actions = s.actions || actions;
+  trashItems = s.trashItems || trashItems;
+  dailyPoints = s.dailyPoints || dailyPoints;
+  dailyCarbon = s.dailyCarbon || dailyCarbon;
+  updateHome(); updateStats();
+}
+
+// ---------- Actions ----------
+function loadActions(){
+  const container = document.getElementById("action-list");
+  container.innerHTML = "";
+  actions.forEach((a, i)=>{
+    const div = document.createElement("div");
+    div.className = "card";
+    div.innerHTML = `<div style="display:flex;align-items:center;gap:10px">
+      <div class="flex-1"><strong>${a.name}</strong><div class="small">+${a.points} points</div></div>
+      <div><button class="primary" onclick="completeAction(${i})">Do it</button></div>
+    </div>`;
+    container.appendChild(div);
+  });
+}
+function completeAction(i){
+  awardPoints(actions[i].points);
+  streak += 1;
+  saveState();
+  confettiBurst();
+  showToast(`Nice! +${actions[i].points} points`);
+}
+
+// ---------- Custom Actions ----------
+function addCustomAction(){
+  const name = document.getElementById("custom-action").value.trim();
+  const pts = parseInt(document.getElementById("custom-points").value, 10);
+  if(!name || !pts || pts <= 0) { showToast("Enter action & points"); return; }
+  const div = document.createElement("div");
+  div.textContent = `${name} (+${pts})`;
+  document.getElementById("custom-list").appendChild(div);
+  document.getElementById("custom-action").value = "";
+  document.getElementById("custom-points").value = "";
+  awardPoints(pts);
+  streak += 1;
+  saveState();
+  confettiBurst();
+}
+
+// ---------- Badges ----------
+function checkBadges(){
+  const container = document.getElementById("badge-list");
+  container.innerHTML = "";
+  const defs = [
+    {name:"Eco Newbie", req:20, icon:"🌱"},
+    {name:"Eco Hero", req:50, icon:"🌎"},
+    {name:"Eco Master", req:100, icon:"🌟"},
+    {name:"Planet Saver", req:200, icon:"🏆"}
+  ];
+  defs.forEach(b=>{
+    const unlocked = points >= b.req;
+    const el = document.createElement("div");
+    el.className = "row";
+    el.style.alignItems = "center";
+    el.style.justifyContent = "space-between";
+    el.style.padding = "8px 6px";
+    el.innerHTML = `<div><strong>${b.icon} ${b.name}</strong><div class="small">requires ${b.req} pts</div></div>
+      <div>${unlocked?'<span class="badge">Unlocked</span>':'<span class="badge" style="opacity:0.45">Locked</span>'}</div>`;
+    container.appendChild(el);
+  });
+}
+
+// ---------- Points / Carbon helper ----------
+function awardPoints(pts){
+  points = Math.max(0, points + pts);
+  const carb = pts * 0.2; // 0.2 kg CO2 per point (simple estimate)
+  carbon += carb;
+  // record daily
+  const today = (new Date()).getDay(); // 0..6
+  dailyPoints[today] = (dailyPoints[today] || 0) + pts;
+  dailyCarbon[today] = (dailyCarbon[today] || 0) + carb;
+  updateHome();
+  updateStats();
+  checkBadges();
+  saveState();
+}
+
+// ---------- Trash Mini-Game ----------
+function loadTrashGame(){
+  const container = document.getElementById("trash-items");
+  container.innerHTML = "";
+  if(trashItems.length === 0){
+    container.innerHTML = "<div class='small'>All items sorted — nice!</div>";
+    return;
+  }
+  trashItems.forEach((t,i)=>{
+    const el = document.createElement("div");
+    el.className = "card";
+    el.style.display = "inline-block";
+    el.style.margin = "6px";
+    el.textContent = t.name;
+    el.draggable = true;
+    el.ondragstart = (e)=> e.dataTransfer.setData('text/plain', i.toString());
+    container.appendChild(el);
+  });
+
+  ["Recycle","Compost","Trash"].forEach(binId=>{
+    const bin = document.getElementById(binId);
+    bin.ondragover = (e)=> e.preventDefault();
+    bin.ondrop = (e)=>{
+      e.preventDefault();
+      const str = e.dataTransfer.getData('text/plain');
+      if(!str) return;
+      const idx = parseInt(str,10);
+      if(isNaN(idx) || !trashItems[idx]) return;
+      const item = trashItems[idx];
+      if(binId === item.bin){
+        awardPoints(5);
+        showToast("Correct! +5 pts");
+        confettiBurst();
+      } else {
+        awardPoints(-2);
+        showToast("Wrong bin! -2 pts");
+        shakeElement(bin);
+      }
+      // remove the item
+      trashItems.splice(idx,1);
+      saveState();
+      loadTrashGame();
+    };
+  });
+}
+
+// ---------- Tiny UI helpers ----------
+function showToast(text){
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = text;
+  document.body.appendChild(t);
+  setTimeout(()=> t.remove(), 1600);
+}
+function shakeElement(el){
+  el.style.transition = 'transform 0.06s';
+  el.style.transform = 'translateX(-10px)';
+  setTimeout(()=> el.style.transform = 'translateX(10px)', 60);
+  setTimeout(()=> el.style.transform = 'translateX(0)', 120);
+}
+
+// ---------- Confetti (canvas burst) ----------
+const confettiCanvas = document.getElementById('confetti');
+const confettiCtx = confettiCanvas.getContext('2d');
+let confettiParticles = [];
+function resizeCanvas(){ confettiCanvas.width = window.innerWidth; confettiCanvas.height = window.innerHeight; }
+window.addEventListener('resize', resizeCanvas); resizeCanvas();
+function confettiBurst(){
+  const count = 60;
+  for(let i=0;i<count;i++){
+    confettiParticles.push({
+      x: Math.random()*confettiCanvas.width,
+      y: -10,
+      vx: (Math.random()-0.5)*6,
+      vy: Math.random()*6+2,
+      r: Math.random()*6+2,
+      color: `hsl(${Math.random()*360}, 85%, 55%)`,
+      rot: Math.random()*360,
+      vr: (Math.random()-0.5)*10
+    });
+  }
+  if(!confettiRunning) startConfetti();
+}
+let confettiRunning = false;
+function startConfetti(){
+  confettiRunning = true;
+  (function frame(){
+    confettiCtx.clearRect(0,0,confettiCanvas.width, confettiCanvas.height);
+    for(let i=0;i<confettiParticles.length;i++){
+      const p = confettiParticles[i];
+      p.x += p.vx; p.y += p.vy; p.vy += 0.12; p.rot += p.vr;
+      confettiCtx.save();
+      confettiCtx.translate(p.x, p.y);
+      confettiCtx.rotate(p.rot * Math.PI/180);
+      confettiCtx.fillStyle = p.color;
+      confettiCtx.fillRect(-p.r/2, -p.r/2, p.r, p.r*0.6);
+      confettiCtx.restore();
+      if(p.y > confettiCanvas.height + 50){ confettiParticles.splice(i,1); i--; }
+    }
+    if(confettiParticles.length>0) requestAnimationFrame(frame);
+    else { confettiRunning=false; confettiCtx.clearRect(0,0,confettiCanvas.width, confettiCanvas.height); }
+  })();
+}
+
+// ---------- AI Chat (local logic) ----------
+function appendChatMessage(who, text){
+  const win = document.getElementById('chat-window');
+  const d = document.createElement('div');
+  d.style.padding='8px'; d.style.marginBottom='6px'; d.style.borderRadius='8px';
+  if(who==='You'){ d.style.background='#e8f5e9'; d.style.textAlign='right'; d.textContent = text; }
+  else { d.style.background='#f1f8e9'; d.style.textAlign='left'; d.textContent = text; }
+  win.appendChild(d); win.scrollTop = win.scrollHeight;
+}
+function sendMessage(){
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if(!text) return;
+  appendChatMessage('You', text);
+  input.value='';
+  // simple intent-based reply
+  const msg = text.toLowerCase();
+  let reply = "Great! Keep doing small actions — consistency is key.";
+  if(msg.includes('plastic')) reply = "Avoid single-use plastics: use a reusable bottle and cloth bags.";
+  else if(msg.includes('energy')) reply = "Turn off lights and unplug chargers. Try energy-efficient bulbs.";
+  else if(msg.includes('water')) reply = "Shorter showers and fix leaks — every liter counts.";
+  else if(msg.includes('plant')) reply = "Plant native species if you can — they help local wildlife.";
+  else if(msg.includes('recommend') || msg.includes('suggest')) {
+    const r = recommendAction();
+    reply = `Try: ${r.name} — it's worth +${r.points} points!`;
+  }
+  setTimeout(()=> appendChatMessage('EcoBot 🤖', reply), 500);
+}
+
+// ---------- Smart Recommendation ----------
+function recommendAction(){
+  // pick action not recently done or random (simple heuristic for offline demo)
+  const idx = Math.floor(Math.random()*actions.length);
+  return actions[idx];
+}
+
+// ---------- Charts with Chart.js ----------
+let pointsChart, carbonChart;
+function initCharts(){
+  const ctx1 = document.getElementById('pointsChart').getContext('2d');
+  pointsChart = new Chart(ctx1, {
+    type:'bar',
+    data:{
+      labels: shortWeekDays(),
+      datasets:[{ label:'Points', data: dailyPoints, backgroundColor:'rgba(40,167,69,0.7)' }]
+    },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
+  });
+  const ctx2 = document.getElementById('carbonChart').getContext('2d');
+  carbonChart = new Chart(ctx2, {
+    type:'line',
+    data:{
+      labels: shortWeekDays(),
+      datasets:[{ label:'CO2 kg', data: dailyCarbon, borderColor:'rgba(75,192,192,1)', backgroundColor:'rgba(75,192,192,0.15)', fill:true }]
+    },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
+  });
+}
+function updateCharts(){
+  if(pointsChart){ pointsChart.data.datasets[0].data = dailyPoints; pointsChart.update(); }
+  if(carbonChart){ carbonChart.data.datasets[0].data = dailyCarbon; carbonChart.update(); }
+}
+function shortWeekDays(){ return ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]; }
+
+// ---------- Daily record helpers ----------
+function recordDaily(pts, carb){
+  const t = new Date().getDay();
+  dailyPoints[t] = (dailyPoints[t]||0) + pts;
+  dailyCarbon[t] = (dailyCarbon[t]||0) + carb;
+  saveState();
+  updateCharts();
+}
+
+// ---------- Initialization & safe wrappers ----------
+function init(){
+  // restore state if exists
+  const s = loadState();
+  if(s){
+    points = s.points || points;
+    streak = s.streak || streak;
+    carbon = s.carbon || carbon;
+    actions = s.actions || actions;
+    trashItems = s.trashItems || trashItems;
+    dailyPoints = s.dailyPoints || dailyPoints;
+    dailyCarbon = s.dailyCarbon || dailyCarbon;
+  } else {
+    // sample initial daily arrays already set
+  }
+  loadActions();
+  loadTrashGame();
+  updateHome();
+  updateStats();
+  checkBadges();
+  initCharts();
+}
+function loadActions(){ /* re-create action list (kept simple) */
+  const container = document.getElementById('action-list'); container.innerHTML='';
+  actions.forEach((a,i)=>{
+    const el = document.createElement('div'); el.className='card';
+    el.innerHTML = `<div style="display:flex; align-items:center; justify-content:space-between">
+      <div><strong>${a.name}</strong><div class="small">+${a.points} pts</div></div>
+      <div><button class="primary" onclick="(function(){completeAction(${i})})()">Do it</button></div>
+    </div>`;
+    container.appendChild(el);
+  });
+}
+/* ensure completeAction uses awardPoints + daily record */
+function completeAction(i){
+  const pts = actions[i].points;
+  awardPoints(pts);
+  streak += 1;
+  const carb = pts * 0.2;
+  recordDaily(pts, carb);
+  confettiBurst();
+  saveState();
+  showToast(`+${pts} points!`);
+}
+
+/* awardPoints used across */
+function awardPoints(pts){
+  points = Math.max(0, points + pts);
+  const carb = pts * 0.2;
+  carbon = Math.max(0, carbon + carb);
+  updateHome();
+  updateStats();
+  checkBadges();
+  saveState();
+}
+
+/* override addCustomAction to call awardPoints + record daily */
+function addCustomAction(){
+  const name = document.getElementById('custom-action').value.trim();
+  const pts = parseInt(document.getElementById('custom-points').value,10);
+  if(!name || !pts || pts<=0){ showToast('Enter action & points'); return; }
+  const div = document.createElement('div'); div.className='small'; div.textContent = `${name} (+${pts})`;
+  document.getElementById('custom-list').appendChild(div);
+  document.getElementById('custom-action').value=''; document.getElementById('custom-points').value='';
+  awardPoints(pts);
+  const carb = pts * 0.2;
+  recordDaily(pts, carb);
+  streak += 1;
+  confettiBurst(); saveState(); showToast(`Logged: ${name} +${pts} pts`);
+}
+
+/* final setup */
+init();
+
+</script>
+</body>
+</html>
